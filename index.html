@@ -121,13 +121,14 @@ td:first-child,th:first-child{text-align:center}
 
 <div class="actions">
 <button type="button" id="pdfBtn">Сформировать PDF с планировкой</button>
+<button type="button" id="jpgBtn" class="btn-blue">Скачать картинку для клиента</button>
 <button type="button" id="copyBtn">Скопировать расчет</button>
 <button type="button" id="emailBtn">Отправить на почту</button>
 <button type="button" id="messengerBtn">Telegram / MAX</button>
 <button type="button" id="csvBtn" class="btn-orange">Скачать график CSV</button>
 </div>
 
-<div class="notice">Для отправки клиенту: сначала сформируйте PDF, затем приложите скачанный файл в почту, Telegram или MAX.</div>
+<div class="notice">Для отправки клиенту удобнее нажать «Скачать картинку для клиента» — получится легкий JPG-файл, который открывается как обычное фото. PDF оставлен как дополнительный вариант.</div>
 </div>
 
 <div class="card">
@@ -426,6 +427,42 @@ async function generatePDF(){
   pdf.save('ipoteka-raschet-s-planirovkoy.pdf');
 }
 
+
+async function generateClientImage(){
+  if(!preparePDF()) return;
+  if(typeof html2canvas === 'undefined'){
+    alert('Библиотека для картинки не загрузилась. Проверьте интернет и обновите страницу.');
+    return;
+  }
+
+  var area = byId('pdfTemplate');
+
+  var canvas = await html2canvas(area,{
+    scale:1.15,
+    useCORS:true,
+    backgroundColor:'#ffffff'
+  });
+
+  var maxWidth = 1400;
+  var ratio = maxWidth / canvas.width;
+  var outCanvas = document.createElement('canvas');
+  outCanvas.width = maxWidth;
+  outCanvas.height = Math.round(canvas.height * ratio);
+
+  var ctx = outCanvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,outCanvas.width,outCanvas.height);
+  ctx.drawImage(canvas,0,0,outCanvas.width,outCanvas.height);
+
+  outCanvas.toBlob(function(blob){
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ipoteka-raschet-s-planirovkoy.jpg';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, 'image/jpeg', 0.82);
+}
+
 function buildText(){
   if(!calculate()) return '';
   return 'Ипотечный расчет\\n\\n' +
@@ -454,7 +491,7 @@ function sendEmail(){
 }
 
 function sendMessenger(){
-  alert('Сначала нажмите «Сформировать PDF с планировкой», затем отправьте скачанный PDF клиенту в Telegram или MAX.');
+  alert('Лучше нажмите «Скачать картинку для клиента» и отправьте JPG в Telegram или MAX. Он легче PDF и открывается как обычное фото.');
 }
 
 function downloadCSV(){
@@ -476,6 +513,7 @@ window.addEventListener('DOMContentLoaded', function(){
 
   byId('calcBtn').addEventListener('click', calculate);
   byId('pdfBtn').addEventListener('click', generatePDF);
+  byId('jpgBtn').addEventListener('click', generateClientImage);
   byId('copyBtn').addEventListener('click', copyResult);
   byId('emailBtn').addEventListener('click', sendEmail);
   byId('messengerBtn').addEventListener('click', sendMessenger);
@@ -507,8 +545,4 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 </body>
-</html>'''
-
-out = Path('/mnt/data/ordinary_mortgage_calculator_stable.html')
-out.write_text(html, encoding='utf-8')
-print(out)
+</html>
